@@ -15,7 +15,10 @@ def calculate_params(la1, dla1, la2, dla2, mu, dmu):
     mT12 = 1 / la2
     dT12 = (1 / (la2 - dla2) - 1 / (la2 + dla2)) / 2
 
-    mT2 = (mu * dmu) ** (-1.086)
+    try:
+        mT2 = (mu * dmu) ** (-1.086)
+    except ZeroDivisionError:
+        mT2 = 0.0
     dT2 = 1 / (mu * gamma(1 + 1 / mT2))
 
     return mT11, dT11, mT12, dT12, mT2, dT2
@@ -67,13 +70,12 @@ class MainWindow(QMainWindow):
 
         self.set_free_point()
 
-    @pyqtSlot(name='on_calculateModelButton_clicked')
+    @pyqtSlot(name='on_calcButton_clicked')
     def on_calculate_model(self):
         self.calculate_ffe()
         self.calculate_pfe()
 
     def calculate_ffe(self):
-        layout = self.ui.externalLayout.itemAt(1)
         tableWidget = self.ui.tableWidget
 
         rows = tableWidget.rowCount()
@@ -82,8 +84,11 @@ class MainWindow(QMainWindow):
         Xmin, Xmax = self.read_model_params()
 
         planningTable = [[tableWidget.item(i, j).text() for j in range(cols)] for i in range(rows)]
+
         coefMatrix, planningMatrix, checkVector = process_matrixes(planningTable)
+
         factorMatrix = np.matrix(list(map(lambda row: row[1:7], planningTable.copy())))
+
 
         Y = [0 for i in range(65)]
 
@@ -245,35 +250,14 @@ class MainWindow(QMainWindow):
         return count
 
     def read_params(self):
-        layout = self.ui.externalLayout.itemAt(0)
+        tmax = 300
 
-        for i in range(layout.rowCount()):
-            for j in range(layout.columnCount()):
-                if layout.itemAtPosition(i, j):
-                    widget = layout.itemAtPosition(i, j).widget()
-                    objName = widget.objectName()
-
-                    if not isinstance(widget, QLineEdit):
-                        continue
-
-                    try:
-                        if objName == 'arriveIntensity1':
-                            la1 = int(widget.text())
-                        elif objName == 'arriveIntensity2':
-                            la2 = int(widget.text())
-                        elif objName == 'processIntensity':
-                            mu = int(widget.text())
-                        elif objName == 'arriveIntensityDispersion1':
-                            dla1 = int(widget.text())
-                        elif objName == 'arriveIntensityDispersion2':
-                            dla2 = int(widget.text())
-                        elif objName == 'processIntensityDispersion':
-                            dmu = int(widget.text())
-                        elif objName == 'modellingTime':
-                            tmax = int(widget.text())
-                    except ValueError:
-                        QMessageBox.warning(self, 'Error', 'Ошибка ввода')
-                        return
+        la1 = float(self.x1.text())
+        dla1 = float(self.x2.text())
+        la2 = float(self.x3.text())
+        dla2 = float(self.x4.text())
+        mu = float(self.x5.text())
+        dmu = float(self.x6.text())
 
         Xmin, Xmax = self.read_model_params()
         la1 = convert_factor_to_value(Xmin[0], Xmax[0], la1)
@@ -293,40 +277,17 @@ class MainWindow(QMainWindow):
 
 
     def read_model_params(self):
-        layout = self.ui.externalLayout.itemAt(1)
-
         Xmin = [0, 0, 0, 0, 0, 0]
         Xmax = [0, 0, 0, 0, 0, 0]
 
-        for i in range(layout.rowCount()):
-            for j in range(layout.columnCount()):
-                if layout.itemAtPosition(i, j):
-                    widget = layout.itemAtPosition(i, j).widget()
-                    objName = widget.objectName()
-
-                    if not isinstance(widget, QLineEdit):
-                        continue
-
-                    try:
-                        if objName == 'arriveIntensityMin':
-                            Xmin[0] = Xmin[2] = float(widget.text())
-                        elif objName == 'arriveIntensityMax':
-                            Xmax[0] = Xmax[2] = float(widget.text())
-                        elif objName == 'arriveIntensityDispersionMin':
-                            Xmin[1] = Xmin[3] = float(widget.text())
-                        elif objName == 'arriveIntensityDispersionMax':
-                            Xmax[1] = Xmax[3] = float(widget.text())
-                        elif objName == 'processIntensityMin':
-                            Xmin[4] = float(widget.text())
-                        elif objName == 'processIntensityMax':
-                            Xmax[4] = float(widget.text())
-                        elif objName == 'processIntensityDispersionMin':
-                            Xmin[5] = float(widget.text())
-                        elif objName == 'processIntensityDispersionMax':
-                            Xmax[5] = float(widget.text())
-                    except ValueError:
-                        QMessageBox.warning(self, 'Error', 'Ошибка ввода')
-                        return
+        Xmin[0] = Xmin[2] = float(self.gen_int_min.text())
+        Xmax[0] = Xmax[2] = float(self.gen_int_max.text())
+        Xmin[1] = Xmin[3] = float(self.gen_range_min.text())
+        Xmax[1] = Xmax[3] = float(self.gen_range_max.text())
+        Xmin[4] = float(self.oa_int_min.text())
+        Xmax[4] = float(self.oa_int_max.text())
+        Xmin[5] = float(self.oa_range_min.text())
+        Xmax[5] = float(self.oa_range_max.text())
 
         return Xmin, Xmax
 
